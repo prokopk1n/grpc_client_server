@@ -1,17 +1,15 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"client_server/session"
 	"context"
 	"encoding/json"
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"html/template"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -22,7 +20,7 @@ type TicketInfo struct {
 	FlightTo      string
 }
 
-func handlerSlashCreater(conn *grpc.ClientConn) func(http.ResponseWriter, *http.Request) {
+func handlerSlashCreate(conn *grpc.ClientConn) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Get request")
 		client := session.NewAirplaneServerClient(conn)
@@ -51,21 +49,13 @@ func handlerSlashCreater(conn *grpc.ClientConn) func(http.ResponseWriter, *http.
 }
 
 func mainPageHandler(w http.ResponseWriter, r *http.Request) {
-	resultFile, err := os.Open("client/html/mainpage.html")
-	if err != nil {
-		log.Printf("Can not open file: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
 	w.Header().Set("Content-type", "text/html")
 	w.Header().Set("Accept-Charset", "utf-8")
-	buf := bytes.Buffer{}
-	scan := bufio.NewScanner(resultFile)
-	for scan.Scan() {
-		buf.WriteString(scan.Text())
-	}
-	_, err = w.Write(buf.Bytes())
+
+	tmpl := template.Must(template.ParseFiles("client/html/mainpage.html"))
+	err := tmpl.Execute(w, nil)
 	if err != nil {
-		log.Printf("Can not write html file: %v")
+		log.Printf("Can not execute template: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -83,7 +73,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", mainPageHandler)
 	mux.HandleFunc("/ticketinfo", ticketPageHandler)
-	mux.HandleFunc("/ticket", handlerSlashCreater(conn))
+	mux.HandleFunc("/ticket", handlerSlashCreate(conn))
+	mux.Handle("/styles.css", http.FileServer(http.Dir("client/html")))
 	fmt.Println("Client: start working...")
 	err = http.ListenAndServe("localhost:8080", mux)
 	if err != nil {
