@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"client_server/session"
 	"context"
 	"encoding/json"
@@ -9,6 +11,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -48,11 +51,27 @@ func handlerSlashCreater(conn *grpc.ClientConn) func(http.ResponseWriter, *http.
 }
 
 func mainPageHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "server/html/mainpage.html")
+	resultFile, err := os.Open("client/html/mainpage.html")
+	if err != nil {
+		log.Printf("Can not open file: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-type", "text/html")
+	w.Header().Set("Accept-Charset", "utf-8")
+	buf := bytes.Buffer{}
+	scan := bufio.NewScanner(resultFile)
+	for scan.Scan() {
+		buf.WriteString(scan.Text())
+	}
+	_, err = w.Write(buf.Bytes())
+	if err != nil {
+		log.Printf("Can not write html file: %v")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func ticketPageHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "server/html/ticket.html")
+	http.ServeFile(w, r, "client/html/ticket.html")
 }
 
 func main() {
@@ -66,8 +85,8 @@ func main() {
 	mux.HandleFunc("/ticketinfo", ticketPageHandler)
 	mux.HandleFunc("/ticket", handlerSlashCreater(conn))
 	fmt.Println("Client: start working...")
-	err = http.ListenAndServe("localhost:8082", mux)
+	err = http.ListenAndServe("localhost:8080", mux)
 	if err != nil {
-		log.Fatalln("can not listen port 8082: %v", err)
+		log.Fatalln("can not listen port 8080: %v", err)
 	}
 }
