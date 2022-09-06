@@ -19,15 +19,11 @@ type TicketInfo struct {
 	FlightTo      string
 }
 
-func Hello(t *TicketInfo) {
-	return
-}
-
 func handlerSlashCreater(conn *grpc.ClientConn) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Get request")
 		client := session.NewAirplaneServerClient(conn)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
 		params := r.URL.Query()
 		if !params.Has("id") {
@@ -37,7 +33,7 @@ func handlerSlashCreater(conn *grpc.ClientConn) func(http.ResponseWriter, *http.
 		ticketNumber := params["id"][0]
 		reply, err := client.GetTicketInfo(ctx, &session.TicketReq{TicketNo: ticketNumber})
 		if err != nil {
-			log.Fatalf("Can not get ticket id = %s info\n", ticketNumber)
+			log.Fatalf("Can not get ticket id = %s info: %v\n", ticketNumber, err)
 		}
 		ticketInfo := TicketInfo{PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
 			FlightTo: reply.GetFlightTo()}
@@ -51,6 +47,14 @@ func handlerSlashCreater(conn *grpc.ClientConn) func(http.ResponseWriter, *http.
 	}
 }
 
+func mainPageHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "server/html/mainpage.html")
+}
+
+func ticketPageHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "server/html/ticket.html")
+}
+
 func main() {
 	conn, err := grpc.Dial("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -58,10 +62,12 @@ func main() {
 	}
 	defer conn.Close()
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handlerSlashCreater(conn))
+	mux.HandleFunc("/", mainPageHandler)
+	mux.HandleFunc("/ticketinfo", ticketPageHandler)
+	mux.HandleFunc("/ticket", handlerSlashCreater(conn))
 	fmt.Println("Client: start working...")
-	err = http.ListenAndServe("localhost:8080", mux)
+	err = http.ListenAndServe("localhost:8082", mux)
 	if err != nil {
-		log.Fatalln("can not listen port 8080")
+		log.Fatalln("can not listen port 8082: %v", err)
 	}
 }

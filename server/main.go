@@ -31,7 +31,7 @@ type server struct {
 	session.UnimplementedAirplaneServerServer
 }
 
-var db = dataBase{db: map[string]map[string]string{"123": map[string]string{"name": "Sergey", "from": "London", "to": "Moscow"}}}
+var db = dataBase{db: map[string]map[string]string{"123": {"name": "Sergey", "from": "London", "to": "Moscow"}}}
 
 func (s *server) GetTicketInfo(ctx context.Context, in *session.TicketReq) (*session.TicketInfoReply, error) {
 	flightId := in.GetTicketNo()
