@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package session;
+
+option go_package = "client_server/session";
+
+service AirplaneServer {
+  // Sends info about booking
+  rpc GetTicketInfo (TicketReq) returns (TicketInfoReply) {}
+}
+
+// The request message containing the book info
+message TicketReq {
+  string ticketNo = 1;
+}
+
+// The response message containing the info about booking
+message TicketInfoReply {
+  string flightDate = 1;
+  string flightId = 2;
+  string passengerName = 3;
+  string flightFrom = 4;
+  string flightTo = 5;
+}
