@@ -33,10 +33,11 @@ func handlerSlashCreate(conn *grpc.ClientConn) func(http.ResponseWriter, *http.R
 		}
 		ticketNumber := params["id"][0]
 		reply, err := client.GetTicketInfo(ctx, &session.TicketReq{TicketNo: ticketNumber})
-		if err != nil {
-			log.Fatalf("Can not get ticket id = %s info: %v\n", ticketNumber, err)
+		if err != nil || reply == nil {
+			log.Printf("Can not get ticket id = %s info: %v\n", ticketNumber, err)
+			w.WriteHeader(http.StatusBadRequest)
 		}
-		ticketInfo := TicketInfo{PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
+		ticketInfo := TicketInfo{FlightDate: reply.GetFlightDate().AsTime(), PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
 			FlightTo: reply.GetFlightTo()}
 		//ticketInfo.FlightDate = time.
 		w.Header().Set("Content-type", "application/json")

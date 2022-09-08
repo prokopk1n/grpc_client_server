@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.21.5
-// source: create_server.proto
+// source: session/create_server.proto
 
 package session
 
@@ -15,7 +15,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-// Requires session-Go v1.32.0 or later.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // AirplaneServerClient is the client API for AirplaneServer service.
@@ -103,5 +103,5 @@ var AirplaneServer_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "create_server.proto",
+	Metadata: "session/create_server.proto",
 }
