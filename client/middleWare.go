@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func checkAuthMiddleware(db *sql.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func CheckAuthMiddleware(db *sql.DB, handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, ok := r.Cookie("jwt-token")
 		if ok != nil {
@@ -20,23 +20,45 @@ func checkAuthMiddleware(db *sql.DB, handler func(http.ResponseWriter, *http.Req
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		tknStr := cookie.Value
-		claims := &Claims{}
-		tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		_, err := jwt.ParseWithClaims(cookie.Value, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 			return jwtKey, nil
 		})
 		if err != nil {
 			if err == jwt.ErrSignatureInvalid {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
+			} else if v, ok := err.(*jwt.ValidationError); ok {
+				if v.Errors == jwt.ValidationErrorExpired {
+					err = checkRefreshToken(r)
+					if err != nil {
+						w.WriteHeader(http.StatusUnauthorized)
+						return
+					}
+					jwtToken, refreshToken, err := newTokenPair()
+					if err != nil {
+						log.Printf("Error occurs in newTokenPair(): %v", err)
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					http.SetCookie(w, &http.Cookie{
+						Name:     "jwt-token",
+						Value:    jwtToken,
+						Path:     "/",
+						HttpOnly: true,
+					})
+					http.SetCookie(w, &http.Cookie{
+						Name:     "refresh-token",
+						Value:    refreshToken,
+						Path:     "/",
+						HttpOnly: true,
+					})
+				}
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+				return
 			}
-			w.WriteHeader(http.StatusBadRequest)
-			return
 		}
-		if !tkn.Valid {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
+		log.Printf("Auth was passed successfully")
 		handler(w, r)
 	}
 }

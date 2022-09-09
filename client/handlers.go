@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"html/template"
@@ -14,13 +13,6 @@ import (
 	"net/http"
 	"time"
 )
-
-var jwtKey = []byte("secret_key")
-
-type Claims struct {
-	Email string `json:"email"`
-	jwt.StandardClaims
-}
 
 func verifyUserPass(user string, pass string, db *sql.DB) bool {
 	rows, err := db.Query("SELECT passw FROM users WHERE email = $1", user)
@@ -47,15 +39,15 @@ func verifyUserPass(user string, pass string, db *sql.DB) bool {
 	}
 }
 
-func ticketPageHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "html/ticket.html")
+func TicketPageHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "template/ticket.html")
 }
 
 func LKhandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("YOU ARE WELCOME"))
 }
 
-func checkAuth(w http.ResponseWriter, r *http.Request) {
+func CheckAuth(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		log.Printf("Can not parse form: %v", err)
@@ -66,23 +58,24 @@ func checkAuth(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("auth_pass")
 
 	if verifyUserPass(email, password, db) {
-		claims := &Claims{
-			Email:          email,
-			StandardClaims: jwt.StandardClaims{},
-		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		tokenString, err := token.SignedString(jwtKey)
+		jwtToken, refreshToken, err := newTokenPair()
 		if err != nil {
-			log.Printf("Can not create token: %v", err)
+			log.Printf("Error occurs in newTokenPair(): %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		cookie := http.Cookie{
-			Name:  "jwt-token",
-			Value: tokenString,
-			Path:  "/",
-		}
-		http.SetCookie(w, &cookie)
+		http.SetCookie(w, &http.Cookie{
+			Name:     "jwt-token",
+			Value:    jwtToken,
+			Path:     "/",
+			HttpOnly: true,
+		})
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh-token",
+			Value:    refreshToken,
+			Path:     "/",
+			HttpOnly: true,
+		})
 		http.Redirect(w, r, "/lk", http.StatusSeeOther)
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
@@ -91,7 +84,7 @@ func checkAuth(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func handlerSlashCreate(conn *grpc.ClientConn) func(http.ResponseWriter, *http.Request) {
+func HandlerSlashCreate(conn *grpc.ClientConn) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Get request")
 		client := session.NewAirplaneServerClient(conn)
@@ -122,13 +115,15 @@ func handlerSlashCreate(conn *grpc.ClientConn) func(http.ResponseWriter, *http.R
 	}
 }
 
-func handlerSignIn(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "html/auth.html")
+func HandlerLogin(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Handler Login...")
+	log.Printf("Handler Login...")
+	http.ServeFile(w, r, "template/auth.html")
 }
 
-func handlerSignUp(w http.ResponseWriter, r *http.Request) {
+func HandlerSignUp(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		http.ServeFile(w, r, "html/registration.html")
+		http.ServeFile(w, r, "template/registration.html")
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -149,15 +144,15 @@ func handlerSignUp(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/lk", http.StatusSeeOther)
+	http.Redirect(w, r, "/signin", http.StatusSeeOther)
 }
 
-func mainPageHandler(w http.ResponseWriter, r *http.Request) {
+func MainPageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("main page handler")
 	w.Header().Set("Content-type", "text/html")
 	w.Header().Set("Accept-Charset", "utf-8")
 
-	tmpl := template.Must(template.ParseFiles("html/mainpage.html"))
+	tmpl := template.Must(template.ParseFiles("template/mainpage.html"))
 	err := tmpl.Execute(w, nil)
 	if err != nil {
 		log.Printf("Can not execute template: %v", err)

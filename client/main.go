@@ -39,14 +39,14 @@ func main() {
 	defer db.Close()
 
 	mux := http.NewServeMux()
-	mux.Handle("/styles.css", http.FileServer(http.Dir("html")))
-	mux.HandleFunc("/", mainPageHandler)
-	mux.HandleFunc("/ticketinfo", ticketPageHandler)
-	mux.HandleFunc("/ticket", handlerSlashCreate(conn))
-	mux.HandleFunc("/signin", handlerSignIn)
-	mux.HandleFunc("/lk", checkAuthMiddleware(db, LKhandler))
-	mux.HandleFunc("/check_auth", checkAuth)
-	mux.HandleFunc("/signup", handlerSignUp)
+	mux.Handle("/styles.css", http.FileServer(http.Dir("template")))
+	mux.HandleFunc("/", MainPageHandler)
+	mux.HandleFunc("/ticketinfo", TicketPageHandler)
+	mux.HandleFunc("/ticket", HandlerSlashCreate(conn))
+	mux.HandleFunc("/signin", HandlerLogin)
+	mux.HandleFunc("/lk", CheckAuthMiddleware(db, LKhandler))
+	mux.HandleFunc("/check_auth", CheckAuth)
+	mux.HandleFunc("/signup", HandlerSignUp)
 	fmt.Println("Client: start working...")
 	srv := &http.Server{
 		Addr:    "localhost:8080",
@@ -57,7 +57,6 @@ func main() {
 		},
 	}
 	err = srv.ListenAndServeTLS("key/server.crt", "key/server.key")
-	err = http.ListenAndServe("localhost:8080", mux)
 	if err != nil {
 		log.Fatalln("can not listen port 8080: %v", err)
 	}
