@@ -17,6 +17,22 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
+func getUserId(jwtToken string) (int, error) {
+	var claims Claims
+	_, err := jwt.ParseWithClaims(jwtToken, &claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	if err == nil {
+		return claims.UserId, nil
+	}
+	if v, ok := err.(*jwt.ValidationError); ok {
+		if v.Errors == jwt.ValidationErrorExpired {
+			return claims.UserId, nil
+		}
+	}
+	return 0, err
+}
+
 func checkRefreshToken(r *http.Request) error {
 	cookie, ok := r.Cookie("refresh-token")
 	if ok != nil {
@@ -57,6 +73,7 @@ func newJWTToken(userId int, expireTime time.Time) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	log.Printf("NEW JWT Token = %+v", token.Claims)
 	return token.SignedString(jwtKey)
 }
 

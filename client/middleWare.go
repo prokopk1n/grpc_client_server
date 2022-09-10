@@ -39,6 +39,7 @@ func CheckAuthMiddleware(handler func(http.ResponseWriter, *http.Request)) func(
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
+					log.Printf("Created new pair of tokens")
 					http.SetCookie(w, &http.Cookie{
 						Name:     "jwt-token",
 						Value:    jwtToken,

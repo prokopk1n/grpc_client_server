@@ -1,4 +1,4 @@
-{{define "add_ticket"}}
+{{define "lk"}}
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -15,7 +15,7 @@
     <link href="css/addticket.css" rel="stylesheet">
     <ul>
     {{range .}}
-        <li><b>{{ .FlightId}} {{.PassengerName}} {{.FlightFrom}} {{.FlightTo}}</b></li>
+        <li><b>{{ .FlightDate}} {{.PassengerName}} {{.FlightFrom}} {{.FlightTo}}</b></li>
     {{end}}
     </ul>
 </div>
@@ -30,3 +30,4 @@
 </div>
 </body>
 </html>
+{{end}}

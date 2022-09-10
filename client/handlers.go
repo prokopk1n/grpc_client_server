@@ -45,8 +45,64 @@ func TicketPageHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "template/ticket.html")
 }
 
+func findAllTickets(jwtToken string) ([]*TicketInfo, error) {
+	userId, err := getUserId(jwtToken)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query("SELECT ticket FROM userstickets WHERE user_id = $1", userId)
+	if err != nil {
+		return nil, err
+	}
+	data := make([]*TicketInfo, 0, 10)
+	var ticket_id string
+	for rows.Next() {
+		err = rows.Scan(&ticket_id)
+		if err != nil {
+			return nil, err
+		}
+		client := session.NewAirplaneServerClient(conn)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		req := &session.TicketReq{TicketNo: ticket_id}
+		if client == nil {
+			log.Printf("CLIENT IS NIL")
+		}
+		reply, err := client.GetTicketInfo(ctx, req)
+		if err != nil {
+			data = append(data, &TicketInfo{FlightDate: time.Time{}, PassengerName: "error", FlightFrom: "error",
+				FlightTo: "error"})
+		} else {
+			data = append(data, &TicketInfo{FlightDate: reply.GetFlightDate().AsTime(), PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
+				FlightTo: reply.GetFlightTo()})
+		}
+	}
+	return data, nil
+}
+
 func LKhandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("YOU ARE WELCOME"))
+	templ, err := template.ParseFiles("template/lk.html", "template/head.html")
+	if err != nil {
+		log.Printf("Can not parse lk template: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	value, err := r.Cookie("jwt-token")
+	data, err := findAllTickets(value.Value)
+	if err != nil {
+		log.Printf("Error while get all tickets from server: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if len(data) == 0 {
+		data = nil
+	}
+	err = templ.ExecuteTemplate(w, "lk", data)
+	if err != nil {
+		log.Printf("Can not execute template lk with data: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 func CheckAuth(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +185,7 @@ func HandlerAddTicket(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/lk", 0)
+	http.Redirect(w, r, "/lk", http.StatusSeeOther)
 }
 
 func HandlerLogin(w http.ResponseWriter, r *http.Request) {

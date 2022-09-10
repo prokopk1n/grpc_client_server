@@ -17,6 +17,7 @@ const (
 )
 
 var db *sql.DB
+var conn *grpc.ClientConn
 
 type TicketInfo struct {
 	FlightDate    time.Time
@@ -26,7 +27,8 @@ type TicketInfo struct {
 }
 
 func main() {
-	conn, err := grpc.Dial("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	var err error
+	conn, err = grpc.Dial("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalln("can not connect to localhost")
 	}
