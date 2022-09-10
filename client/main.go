@@ -39,14 +39,15 @@ func main() {
 	defer db.Close()
 
 	mux := http.NewServeMux()
-	mux.Handle("/styles.css", http.FileServer(http.Dir("template")))
 	mux.HandleFunc("/", MainPageHandler)
 	mux.HandleFunc("/ticketinfo", TicketPageHandler)
 	mux.HandleFunc("/ticket", HandlerSlashCreate(conn))
 	mux.HandleFunc("/signin", HandlerLogin)
-	mux.HandleFunc("/lk", CheckAuthMiddleware(db, LKhandler))
+	mux.HandleFunc("/lk", CheckAuthMiddleware(LKhandler))
 	mux.HandleFunc("/check_auth", CheckAuth)
 	mux.HandleFunc("/signup", HandlerSignUp)
+	mux.HandleFunc("/addticket", CheckAuthMiddleware(HandlerAddTicket))
+	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("./template/css"))))
 	fmt.Println("Client: start working...")
 	srv := &http.Server{
 		Addr:    "localhost:8080",

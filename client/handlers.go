@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"html/template"
@@ -14,28 +15,29 @@ import (
 	"time"
 )
 
-func verifyUserPass(user string, pass string, db *sql.DB) bool {
-	rows, err := db.Query("SELECT passw FROM users WHERE email = $1", user)
+func verifyUserPass(user string, pass string, db *sql.DB) (int, bool) {
+	rows, err := db.Query("SELECT user_id, passw FROM users WHERE email = $1", user)
 	if err != nil {
 		log.Printf("Can not find user %s in DB: %v", user, err)
-		return false
+		return 0, false
 	}
 	if !rows.Next() {
 		log.Printf("Empty result with login %s", user)
-		return false
+		return 0, false
 	}
 	var password string
-	err = rows.Scan(&password)
+	var userId int
+	err = rows.Scan(&userId, &password)
 	if err != nil {
 		log.Printf("Can not scan password: %v", err)
-		return false
+		return 0, false
 	}
 	if compared := bcrypt.CompareHashAndPassword([]byte(password), []byte(pass)); compared == nil {
 		log.Printf("Auth was passed successfully")
-		return true
+		return userId, true
 	} else {
 		log.Printf("Auth was not passed: %v", compared)
-		return false
+		return 0, false
 	}
 }
 
@@ -57,8 +59,8 @@ func CheckAuth(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("auth_email")
 	password := r.FormValue("auth_pass")
 
-	if verifyUserPass(email, password, db) {
-		jwtToken, refreshToken, err := newTokenPair()
+	if userId, ok := verifyUserPass(email, password, db); ok {
+		jwtToken, refreshToken, err := newTokenPair(userId)
 		if err != nil {
 			log.Printf("Error occurs in newTokenPair(): %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -115,10 +117,23 @@ func HandlerSlashCreate(conn *grpc.ClientConn) func(http.ResponseWriter, *http.R
 	}
 }
 
+func HandlerAddTicket(w http.ResponseWriter, r *http.Request) {
+	var claims Claims
+	cookie, _ := r.Cookie("jwt-token")
+	jwt.ParseWithClaims(cookie.Value, &claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+	_, err := db.Query("INSERT INTO userstickets(user_id, ticket) VALUES($1, $2)", claims.UserId, r.FormValue("ticket_id"))
+	if err != nil {
+		log.Printf("Can not create new ticket for user %d: %v", claims.UserId, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/lk", 0)
+}
+
 func HandlerLogin(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Handler Login...")
-	log.Printf("Handler Login...")
-	http.ServeFile(w, r, "template/auth.html")
+	http.ServeFile(w, r, "template/login.html")
 }
 
 func HandlerSignUp(w http.ResponseWriter, r *http.Request) {
@@ -152,8 +167,13 @@ func MainPageHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "text/html")
 	w.Header().Set("Accept-Charset", "utf-8")
 
-	tmpl := template.Must(template.ParseFiles("template/mainpage.html"))
-	err := tmpl.Execute(w, nil)
+	tmpl, err := template.ParseFiles("template/main_page.html", "template/main.html", "template/head.html")
+	if err != nil {
+		log.Printf("Can not parse main page template: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.ExecuteTemplate(w, "main_page", nil)
 	if err != nil {
 		log.Printf("Can not execute template: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)

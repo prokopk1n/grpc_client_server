@@ -13,6 +13,7 @@ import (
 var jwtKey = []byte("secret_key")
 
 type Claims struct {
+	UserId int
 	jwt.StandardClaims
 }
 
@@ -48,8 +49,9 @@ func checkRefreshToken(r *http.Request) error {
 	return nil
 }
 
-func newJWTToken(expireTime time.Time) (string, error) {
+func newJWTToken(userId int, expireTime time.Time) (string, error) {
 	claims := &Claims{
+		UserId: userId,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expireTime.Unix(),
 		},
@@ -72,8 +74,8 @@ func newRefreshToken(expireTime time.Time) (string, error) {
 	return refreshToken, nil
 }
 
-func newTokenPair() (jwtToken string, refreshToken string, err error) {
-	jwtToken, err = newJWTToken(time.Now().Add(time.Second * 10))
+func newTokenPair(userId int) (jwtToken string, refreshToken string, err error) {
+	jwtToken, err = newJWTToken(userId, time.Now().Add(time.Second*10))
 	if err != nil {
 		log.Printf("Can not create JWT token: %v", err)
 		return

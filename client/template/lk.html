@@ -1,0 +1,32 @@
+{{define "add_ticket"}}
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Главная страница</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link href="https://getbootstrap.com/docs/5.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+</head>
+<body>
+{{template "header"}}
+
+<div>
+    <link href="css/addticket.css" rel="stylesheet">
+    <ul>
+    {{range .}}
+        <li><b>{{ .FlightId}} {{.PassengerName}} {{.FlightFrom}} {{.FlightTo}}</b></li>
+    {{end}}
+    </ul>
+</div>
+
+<div>
+    <form action="/addticket" method="post">
+        <h1 class="h3 mb-3 font-weight-normal">Please enter ticket number</h1>
+        <label for="ticket_id" class="sr-only"></label>
+        <input type="text" id="ticket_id" name="ticket_id" class="form-control" placeholder="Ticket number" autofocus="">
+        <button type="submit">Add</button>
+    </form>
+</div>
+</body>
+</html>
