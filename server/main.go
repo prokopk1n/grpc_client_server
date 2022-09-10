@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	postgresConn = "user=postgres password=cskamoscoW99 dbname=demo sslmode=disable"
+	postgresConn = "user=postgres password=password dbname=demo sslmode=disable"
 )
 
 type dataBase struct {
@@ -23,9 +23,9 @@ type dataBase struct {
 
 func (db *dataBase) GetTicketId(id string) (*session.TicketInfoReply, error) {
 	rows, err := db.Query("SELECT passenger_name, flight_id, scheduled_departure, departure_airport, arrival_airport "+
-		"FROM (Tickets JOIN Ticket_flights USING (ticket_no)) JOIN Flights USING (flight_id) WHERE ticket_no = $1;", id)
+		"FROM (Tickets JOIN Ticket_flights USING (ticket_no)) JOIN Flights USING (flight_id) WHERE ticket_no = $1", id)
 	if err != nil {
-		log.Printf("Error while query to database: %v", err)
+		log.Printf("Error while query to database: %v\n", err)
 		return nil, err
 	}
 
@@ -65,6 +65,11 @@ func main() {
 		log.Fatalf("Can not connect to database: %v", err)
 	}
 	defer db.Close()
+
+	_, err = db.Query("SET lc_messages TO 'en_US.UTF-8'")
+	if err != nil {
+		log.Printf("Can not change locale of postgres to English")
+	}
 
 	lis, err := net.Listen("tcp", "localhost:8081")
 	if err != nil {
