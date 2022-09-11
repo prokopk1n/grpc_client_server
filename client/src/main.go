@@ -1,6 +1,7 @@
 package main
 
 import (
+	"client_server/client/src/handlers"
 	"crypto/tls"
 	"database/sql"
 	"fmt"
@@ -19,14 +20,6 @@ const (
 var db *sql.DB
 var conn *grpc.ClientConn
 
-type TicketInfo struct {
-	TicketId      string
-	FlightDate    time.Time
-	PassengerName string
-	FlightFrom    string
-	FlightTo      string
-}
-
 func main() {
 	var err error
 	conn, err = grpc.Dial("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -41,16 +34,9 @@ func main() {
 	}
 	defer db.Close()
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", MainPageHandler)
-	mux.HandleFunc("/ticketinfo", TicketPageHandler)
-	mux.HandleFunc("/ticket", HandlerSlashCreate(conn))
-	mux.HandleFunc("/signin", HandlerLogin)
-	mux.HandleFunc("/lk", CheckAuthMiddleware(LKhandler))
-	mux.HandleFunc("/check_auth", CheckAuth)
-	mux.HandleFunc("/signup", HandlerSignUp)
-	mux.HandleFunc("/addticket", CheckAuthMiddleware(HandlerAddTicket))
-	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("./template/css"))))
+	handlerManager := handlers.NewHandlerManager(conn, db, time.Second*10, time.Hour)
+	mux := handlerManager.Init()
+
 	fmt.Println("Client: start working...")
 	srv := &http.Server{
 		Addr:    "localhost:8080",
@@ -60,7 +46,7 @@ func main() {
 			PreferServerCipherSuites: true,
 		},
 	}
-	err = srv.ListenAndServeTLS("key/server.crt", "key/server.key")
+	err = srv.ListenAndServeTLS("../key/server.crt", "../key/server.key")
 	if err != nil {
 		log.Fatalln("can not listen port 8080: %v", err)
 	}

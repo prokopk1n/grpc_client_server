@@ -1,12 +1,13 @@
-package main
+package handlers
 
 import (
+	"client_server/client/src/tokens"
 	"github.com/dgrijalva/jwt-go"
 	"log"
 	"net/http"
 )
 
-func CheckAuthMiddleware(handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func (handlerManager *HandlerManager) CheckAuthMiddleware(handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, ok := r.Cookie("jwt-token")
 		if ok != nil {
@@ -17,9 +18,9 @@ func CheckAuthMiddleware(handler func(http.ResponseWriter, *http.Request)) func(
 			http.Redirect(w, r, "/signin", http.StatusSeeOther)
 			return
 		}
-		var claims Claims
+		var claims tokens.Claims
 		_, err := jwt.ParseWithClaims(cookie.Value, &claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
+			return tokens.JwtKey, nil
 		})
 		if err != nil {
 			if err == jwt.ErrSignatureInvalid {
@@ -28,12 +29,12 @@ func CheckAuthMiddleware(handler func(http.ResponseWriter, *http.Request)) func(
 			} else if v, ok := err.(*jwt.ValidationError); ok {
 				if v.Errors == jwt.ValidationErrorExpired {
 					log.Printf("Token jwt lifetime expired")
-					err = checkRefreshToken(r)
+					err = tokens.CheckRefreshToken(r, handlerManager.db)
 					if err != nil {
 						http.Redirect(w, r, "/signin", http.StatusSeeOther)
 						return
 					}
-					jwtToken, refreshToken, err := newTokenPair(claims.UserId)
+					jwtToken, refreshToken, err := tokens.NewTokenPair(handlerManager.jwtLifeTime, handlerManager.refreshLifeTime, claims.UserId, handlerManager.db)
 					if err != nil {
 						log.Printf("Error occurs in newTokenPair(): %v", err)
 						w.WriteHeader(http.StatusInternalServerError)

@@ -1,7 +1,8 @@
-package main
+package tokens
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
@@ -10,17 +11,17 @@ import (
 	"time"
 )
 
-var jwtKey = []byte("secret_key")
+var JwtKey = []byte("secret_key")
 
 type Claims struct {
 	UserId int
 	jwt.StandardClaims
 }
 
-func getUserId(jwtToken string) (int, error) {
+func GetUserId(jwtToken string) (int, error) {
 	var claims Claims
 	_, err := jwt.ParseWithClaims(jwtToken, &claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return JwtKey, nil
 	})
 	if err == nil {
 		return claims.UserId, nil
@@ -33,7 +34,7 @@ func getUserId(jwtToken string) (int, error) {
 	return 0, err
 }
 
-func checkRefreshToken(r *http.Request) error {
+func CheckRefreshToken(r *http.Request, db *sql.DB) error {
 	cookie, ok := r.Cookie("refresh-token")
 	if ok != nil {
 		log.Printf("Can not find refresh-token in cookie")
@@ -65,7 +66,7 @@ func checkRefreshToken(r *http.Request) error {
 	return nil
 }
 
-func newJWTToken(userId int, expireTime time.Time) (string, error) {
+func NewJWTToken(userId int, expireTime time.Time) (string, error) {
 	claims := &Claims{
 		UserId: userId,
 		StandardClaims: jwt.StandardClaims{
@@ -74,10 +75,10 @@ func newJWTToken(userId int, expireTime time.Time) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	log.Printf("NEW JWT Token = %+v", token.Claims)
-	return token.SignedString(jwtKey)
+	return token.SignedString(JwtKey)
 }
 
-func newRefreshToken(expireTime time.Time) (string, error) {
+func NewRefreshToken(expireTime time.Time, db *sql.DB) (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
@@ -91,13 +92,13 @@ func newRefreshToken(expireTime time.Time) (string, error) {
 	return refreshToken, nil
 }
 
-func newTokenPair(userId int) (jwtToken string, refreshToken string, err error) {
-	jwtToken, err = newJWTToken(userId, time.Now().Add(time.Second*10))
+func NewTokenPair(jwtLifeTime, refreshLifeTime time.Duration, userId int, db *sql.DB) (jwtToken string, refreshToken string, err error) {
+	jwtToken, err = NewJWTToken(userId, time.Now().Add(jwtLifeTime))
 	if err != nil {
 		log.Printf("Can not create JWT token: %v", err)
 		return
 	}
-	refreshToken, err = newRefreshToken(time.Now().Add(time.Hour * 72))
+	refreshToken, err = NewRefreshToken(time.Now().Add(refreshLifeTime), db)
 	if err != nil {
 		log.Printf("Can not create Refresh token: %+v", err)
 		return
