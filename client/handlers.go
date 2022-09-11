@@ -55,25 +55,25 @@ func findAllTickets(jwtToken string) ([]*TicketInfo, error) {
 		return nil, err
 	}
 	data := make([]*TicketInfo, 0, 10)
-	var ticket_id string
+	var ticketId string
 	for rows.Next() {
-		err = rows.Scan(&ticket_id)
+		err = rows.Scan(&ticketId)
 		if err != nil {
 			return nil, err
 		}
 		client := session.NewAirplaneServerClient(conn)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 		defer cancel()
-		req := &session.TicketReq{TicketNo: ticket_id}
+		req := &session.TicketReq{TicketNo: ticketId}
 		if client == nil {
 			log.Printf("CLIENT IS NIL")
 		}
 		reply, err := client.GetTicketInfo(ctx, req)
 		if err != nil {
-			data = append(data, &TicketInfo{FlightDate: time.Time{}, PassengerName: "error", FlightFrom: "error",
+			data = append(data, &TicketInfo{TicketId: ticketId, FlightDate: time.Time{}, PassengerName: "error", FlightFrom: "error",
 				FlightTo: "error"})
 		} else {
-			data = append(data, &TicketInfo{FlightDate: reply.GetFlightDate().AsTime(), PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
+			data = append(data, &TicketInfo{TicketId: ticketId, FlightDate: reply.GetFlightDate().AsTime(), PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
 				FlightTo: reply.GetFlightTo()})
 		}
 	}
@@ -161,9 +161,8 @@ func HandlerSlashCreate(conn *grpc.ClientConn) func(http.ResponseWriter, *http.R
 			fmt.Fprintf(w, "Can not get ticket id = %s", ticketNumber)
 			return
 		}
-		ticketInfo := TicketInfo{FlightDate: reply.GetFlightDate().AsTime(), PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
+		ticketInfo := TicketInfo{TicketId: ticketNumber, FlightDate: reply.GetFlightDate().AsTime(), PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
 			FlightTo: reply.GetFlightTo()}
-		//ticketInfo.FlightDate = time.
 		w.Header().Set("Content-type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		err = json.NewEncoder(w).Encode(ticketInfo)

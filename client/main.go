@@ -20,6 +20,7 @@ var db *sql.DB
 var conn *grpc.ClientConn
 
 type TicketInfo struct {
+	TicketId      string
 	FlightDate    time.Time
 	PassengerName string
 	FlightFrom    string

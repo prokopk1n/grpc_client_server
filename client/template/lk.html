@@ -15,7 +15,8 @@
     <link href="css/addticket.css" rel="stylesheet">
     <ul>
     {{range .}}
-        <li><b>{{ .FlightDate}} {{.PassengerName}} {{.FlightFrom}} {{.FlightTo}}</b></li>
+        <li><b>{{ .FlightDate}} {{.PassengerName}} {{.FlightFrom}} {{.FlightTo}}</b>
+            <a href="/delete/{{.TicketId}}">удалить билет</a></li>
     {{end}}
     </ul>
 </div>
