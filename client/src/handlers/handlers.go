@@ -182,7 +182,7 @@ func (handlerManager *HandlerManager) HandlerSlashCreate(w http.ResponseWriter, 
 	ticketInfo := TicketInfo{TicketId: ticketNumber, FlightDate: reply.GetFlightDate().AsTime(), PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
 		FlightTo: reply.GetFlightTo()}
 	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(ticketInfo)
 	if err != nil {
 		log.Fatalln("Can not encode to json format")

@@ -1,4 +1,4 @@
-DROP DATABASE clientdb;
+DROP DATABASE IF EXISTS clientdb;
 
 CREATE DATABASE clientdb;
 
