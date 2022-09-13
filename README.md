@@ -1,6 +1,6 @@
 # Клиент-серверное приложение с использованием фреймворка gRPC.
 Приложение предусмотрено для хранения авиабилетов или поиска информации по ним. 
-![Image alt](https://github.com/prokopk1n/resources/raw/grpc_client_server/main_page.png)
+![Image alt](https://github.com/prokopk1n/resources/blob/main/main_page.png)
 
 ## Table of Contents
 * [Setup](#setup)
