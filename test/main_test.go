@@ -110,7 +110,7 @@ func TestFindTicketById(t *testing.T) {
 			fmt.Printf("Client server is nil")
 		}
 		req, _ := http.NewRequest("GET", clientServer.URL+value.path+"?"+value.query, nil)
-		fmt.Printf("New request: %s\n", req.URL)
+		//fmt.Printf("New request: %s\n", req.URL)
 		resp, err := client.Do(req)
 		if err != nil {
 			t.Errorf("[%s] request error: %v", caseName, err)

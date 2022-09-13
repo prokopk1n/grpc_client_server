@@ -18,7 +18,7 @@ const (
 )
 
 func main() {
-	conn, err := grpc.Dial("localhost:8081", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial("host.docker.internal:8081", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalln("can not connect to localhost")
 	}
@@ -33,7 +33,7 @@ func main() {
 	handlerManager := handlers.NewHandlerManager(conn, db, time.Second*10, time.Hour)
 	mux := handlerManager.Init()
 	srv := &http.Server{
-		Addr:    "localhost:8080",
+		Addr:    ":8080",
 		Handler: mux,
 		TLSConfig: &tls.Config{
 			MinVersion:               tls.VersionTLS13,

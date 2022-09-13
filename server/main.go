@@ -26,7 +26,7 @@ func main() {
 		log.Printf("Can not change locale of postgres to English")
 	}
 
-	lis, err := net.Listen("tcp", "localhost:8081")
+	lis, err := net.Listen("tcp", ":8081")
 	if err != nil {
 		log.Fatalln("Can not listen port 8081")
 	}
