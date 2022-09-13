@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	postgresConn = "user=postgres password=password dbname=clientdb sslmode=disable"
+	postgresConn = "host=host.docker.internal port=5431 user=postgres password=postgres dbname=clientdb sslmode=disable"
 )
 
 func main() {
@@ -27,6 +27,10 @@ func main() {
 	db, err := sql.Open("postgres", postgresConn)
 	if err != nil {
 		log.Fatalf("Can not connect to : %v", err)
+	}
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("Can not ping db: %v", err)
 	}
 	defer db.Close()
 

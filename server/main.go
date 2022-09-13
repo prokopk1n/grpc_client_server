@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	postgresConn = "user=postgres password=password dbname=demo sslmode=disable"
+	postgresConn = "host=host.docker.internal port=5431 user=postgres password=postgres dbname=demo sslmode=disable"
 )
 
 func main() {
@@ -20,6 +20,11 @@ func main() {
 		log.Fatalf("Can not connect to database: %v", err)
 	}
 	defer db.Close()
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("Can not ping db: %v", err)
+	}
 
 	_, err = db.Query("SET lc_messages TO 'en_US.UTF-8'")
 	if err != nil {
