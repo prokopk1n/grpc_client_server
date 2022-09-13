@@ -5,7 +5,6 @@
     cd client/src
     go run main.go
 # Тестирование приложения:
-Прим. для запуска тестов должен быть установлен docker
     cd docker
     docker-compose -p newtest -f docker-compose-test.yml -d up
     cd ../test
