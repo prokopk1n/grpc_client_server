@@ -36,3 +36,6 @@
 ## More info
 ### Схема базы данных clientdb:
 ![Image alt](https://github.com/prokopk1n/resources/blob/main/userdb.png)
+
+### Поле для регистрации:
+![Image alt](https://github.com/prokopk1n/resources/blob/main/auth.png)
