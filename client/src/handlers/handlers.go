@@ -218,8 +218,8 @@ func (handlerManager *HandlerManager) HandlerSignUp(w http.ResponseWriter, r *ht
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	email := r.FormValue("email")
-	password, err := bcrypt.GenerateFromPassword([]byte(r.FormValue("password")), 0)
+	email := r.FormValue("auth_email")
+	password, err := bcrypt.GenerateFromPassword([]byte(r.FormValue("auth_pass")), 0)
 	if err != nil {
 		log.Printf("Can not generate hash frow password: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
