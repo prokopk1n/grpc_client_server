@@ -35,4 +35,4 @@
 
 ## More info
 ### Схема базы данных clientdb:
-![Image alt](https://github.com/prokopk1n/resources/raw/grpc_client_server/clientdb.png)
+![Image alt](https://github.com/prokopk1n/resources/blob/main/userdb.png)
