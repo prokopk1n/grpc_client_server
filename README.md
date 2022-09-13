@@ -41,62 +41,34 @@
 #### Поле для регистрации:
 ![Image alt](https://github.com/prokopk1n/resources/blob/main/auth.png)
 
-#### Аутентификация пользователей
+#### Нахождение авиабилета по его id.
 
-Данная функция используется как middleware для аутентификации пользователей.
+Данная функция с помощью RPC взаимодействует с базой данных авиабилетов.
 ```
-func (handlerManager *HandlerManager) CheckAuthMiddleware(handler func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		cookie, ok := r.Cookie("jwt-token")
-		if ok != nil {
-			if ok == http.ErrNoCookie {
-				log.Printf("No cookie: %v", ok)
-			}
-			log.Printf("Check auth: %v", ok)
-			http.Redirect(w, r, "/signin", http.StatusSeeOther)
-			return
-		}
-		var claims tokens.Claims
-		_, err := jwt.ParseWithClaims(cookie.Value, &claims, func(token *jwt.Token) (interface{}, error) {
-			return tokens.JwtKey, nil
-		})
-		if err != nil {
-			if err == jwt.ErrSignatureInvalid {
-				http.Redirect(w, r, "/signin", http.StatusSeeOther)
-				return
-			} else if v, ok := err.(*jwt.ValidationError); ok {
-				if v.Errors == jwt.ValidationErrorExpired {
-					log.Printf("Token jwt lifetime expired")
-					err = tokens.CheckRefreshToken(r, handlerManager.db)
-					if err != nil {
-						http.Redirect(w, r, "/signin", http.StatusSeeOther)
-						return
-					}
-					jwtToken, refreshToken, err := tokens.NewTokenPair(handlerManager.jwtLifeTime, handlerManager.refreshLifeTime, claims.UserId, handlerManager.db)
-					if err != nil {
-						log.Printf("Error occurs in newTokenPair(): %v", err)
-						w.WriteHeader(http.StatusInternalServerError)
-						return
-					}
-					http.SetCookie(w, &http.Cookie{
-						Name:     "jwt-token",
-						Value:    jwtToken,
-						Path:     "/",
-						HttpOnly: true,
-					})
-					http.SetCookie(w, &http.Cookie{
-						Name:     "refresh-token",
-						Value:    refreshToken,
-						Path:     "/",
-						HttpOnly: true,
-					})
-				}
-			} else {
-				http.Redirect(w, r, "/signin", http.StatusSeeOther)
-				return
-			}
-		}
-		handler(w, r)
+func (handlerManager *HandlerManager) HandlerSlashCreate(w http.ResponseWriter, r *http.Request) {
+	client := session.NewAirplaneServerClient(handlerManager.conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	params := r.URL.Query()
+	if !params.Has("id") {
+		w.WriteHeader(404)
+		return
+	}
+	ticketNumber := params["id"][0]
+	reply, err := client.GetTicketInfo(ctx, &session.TicketReq{TicketNo: ticketNumber})
+	if err != nil {
+		log.Printf("Can not get ticket id = %s info: %v\n", ticketNumber, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Can not get ticket id = %s", ticketNumber)
+		return
+	}
+	ticketInfo := TicketInfo{TicketId: ticketNumber, FlightDate: reply.GetFlightDate().AsTime(), PassengerName: reply.GetPassengerName(), FlightFrom: reply.GetFlightFrom(),
+		FlightTo: reply.GetFlightTo()}
+	w.Header().Set("Content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(ticketInfo)
+	if err != nil {
+		log.Fatalln("Can not encode to json format")
 	}
 }
 ```
